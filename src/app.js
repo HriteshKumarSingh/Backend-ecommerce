@@ -2,6 +2,7 @@ import "dotenv/config"
 import cors from "cors"
 import cookieParse from "cookie-parser"
 import express, { json } from "express"
+import userRouter from "./routers/user.router.js"
 
 
 const app = express()
@@ -17,8 +18,8 @@ app.use(express.static("public"))
 app.use(cookieParse())
 
 
-
-
+// User router
+app.use("/api/user/" , userRouter)
 
 
 export {app}
