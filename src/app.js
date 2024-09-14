@@ -1,8 +1,8 @@
 import "dotenv/config"
 import cors from "cors"
 import cookieParse from "cookie-parser"
-import express, { json } from "express"
-import userRouter from "./routers/user.router.js"
+import express from "express"
+import userRouter from "./routers/user.routes.js"
 
 
 const app = express()

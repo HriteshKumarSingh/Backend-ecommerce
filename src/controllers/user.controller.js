@@ -6,6 +6,7 @@ import randomatic from "randomatic";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import JWT from "jsonwebtoken";
+import { uploadOnCloudinary } from "../services/cloudinary.service.js"
 
 // Generation of access and refresh token
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -48,11 +49,21 @@ const signup = asyncHandler(async (req, res) => {
     );
   }
 
+  if (!req.file) {
+    throw new apiError(400, "cover image is required");
+  }
+
+  const coverImagePath = req.file.path
+
+  const coverImage = await uploadOnCloudinary(coverImagePath)
+
+
   const user = await User.create({
     firstName,
     lastName,
     email,
     password,
+    coverImage : coverImage.url || ""
   });
 
   const createdUser = await User.findById(user._id).select(

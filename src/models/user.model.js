@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "user",
     },
+    coverImage : {
+      type : String,
+      default : null
+    },
     refreshToken: {
       type: String,
     },
