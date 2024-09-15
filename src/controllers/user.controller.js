@@ -6,7 +6,8 @@ import randomatic from "randomatic";
 import bcrypt from "bcrypt";
 import nodemailer from "nodemailer";
 import JWT from "jsonwebtoken";
-import { uploadOnCloudinary } from "../services/cloudinary.service.js"
+import { uploadOnCloudinary } from "../services/cloudinary.service.user.js";
+import { v2 as cloudinary } from "cloudinary";
 
 // Generation of access and refresh token
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -53,17 +54,19 @@ const signup = asyncHandler(async (req, res) => {
     throw new apiError(400, "cover image is required");
   }
 
-  const coverImagePath = req.file.path
+  const coverImagePath = req.file.path;
 
-  const coverImage = await uploadOnCloudinary(coverImagePath)
-
+  const coverImage = await uploadOnCloudinary(coverImagePath);
 
   const user = await User.create({
     firstName,
     lastName,
     email,
     password,
-    coverImage : coverImage.url || ""
+    coverImage: {
+      public_id: coverImage.public_id || "",
+      url: coverImage.url || "",
+    },
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -75,10 +78,10 @@ const signup = asyncHandler(async (req, res) => {
   }
 
   return res
-    .status(200)
+    .status(201)
     .json(
       new apiResponse(
-        200,
+        201,
         "your account has been created successfully",
         createdUser
       )
@@ -167,126 +170,164 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 // Delete account (user account delete)
-const deleteUserAccount = asyncHandler(async(req , res) =>{
-  const {password} = req.body
-  const userId = req.user._id
+const deleteUserAccount = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const userId = req.user._id;
 
-  if(!password){
+  if (!password) {
     throw new apiError(400, "please provide value for password field");
   }
 
-  const user = await User.findById(userId)
+  const user = await User.findById(userId);
 
-  const isPasswordValid = await user.isPasswordCorrect(password.trim())
+  const isPasswordValid = await user.isPasswordCorrect(password.trim());
 
-  if(!isPasswordValid){
-    throw new apiError(400, "invalid password, please check your password")
+  if (!isPasswordValid) {
+    throw new apiError(400, "invalid password, please check your password");
+  }
+
+  const coverImagePublicId = user.coverImage?.public_id;
+  const cloudinaryResponse =
+    await cloudinary.uploader.destroy(coverImagePublicId);
+
+  if (cloudinaryResponse.result !== "ok") {
+    throw new apiError(500, "failed to delete cover image from Cloudinary");
   }
 
   try {
-    await User.findByIdAndDelete(userId)
+    await User.findByIdAndDelete(userId);
 
     return res
-    .status(200)
-    .json(new apiResponse(200, "user deleted successfully"))
+      .status(200)
+      .json(new apiResponse(200, "user deleted successfully"));
   } catch (error) {
-    throw new apiError(500, "an error occurred while trying to delete the user, please try again later")
+    throw new apiError(
+      500,
+      "an error occurred while trying to delete the user, please try again later"
+    );
   }
-})
+});
 
 // Update user (update user account details)
-const updateUserAccount = asyncHandler(async(req , res) => {
-  const userId = req.user._id
-  const {firstName, lastName, email} = req.body
+const updateUserAccount = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { firstName, lastName, email } = req.body;
+  const updateFields = {};
 
-  if(!firstName && !lastName && !email){
-    throw new apiError(400, "at least one field is required to update")
+  if (!firstName && !lastName && !email && !req.file) {
+    throw new apiError(400, "at least one field is required to update");
   }
 
-  const updateFields = {}
+  if (firstName) updateFields.firstName = firstName.trim();
+  if (lastName) updateFields.lastName = lastName.trim();
+  if (email) updateFields.email = email.trim();
 
-  if(firstName) updateFields.firstName = firstName.trim()
-  if(lastName) updateFields.lastName = lastName.trim()
-  if(email) updateFields.email = email.trim()
-  
+  if (req.file) {
+    const user = await User.findById(userId);
+    if (user.coverImage && user.coverImage.public_id) {
+      await cloudinary.uploader.destroy(user.coverImage.public_id);
+    }
+
+    const coverImagePath = req.file.path;
+    const coverImage = await uploadOnCloudinary(coverImagePath);
+
+    if (!coverImage) {
+      throw new apiError(500, "failed to upload the new cover image");
+    }
+
+    updateFields.coverImage = {
+      public_id: coverImage.public_id,
+      url: coverImage.url,
+    };
+  }
+
   const updatedUser = await User.findByIdAndUpdate(
     userId,
-    { $set : updateFields },
-    { new : true }
-  )
+    { $set: updateFields },
+    { new: true }
+  );
 
-  if(!updatedUser){
-    throw new apiError(500, "account details could not be updated, please try again later")
+  if (!updatedUser) {
+    throw new apiError(
+      500,
+      "account details could not be updated, please try again later"
+    );
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "account details updated successfully", updatedUser))
-})
+    .status(200)
+    .json(
+      new apiResponse(200, "account details updated successfully", updatedUser)
+    );
+});
 
 // Update password (change user password)
-const updatePassword = asyncHandler(async(req , res) => {
-  const userId = req.user
-  const {oldPassword , newPassword} = req.body
+const updatePassword = asyncHandler(async (req, res) => {
+  const userId = req.user;
+  const { oldPassword, newPassword } = req.body;
 
-  if([oldPassword , newPassword].some((fields) => fields.trim() === "")){
-    throw new apiError(400, "please provide value for required field")
+  if ([oldPassword, newPassword].some((fields) => fields.trim() === "")) {
+    throw new apiError(400, "please provide value for required field");
   }
 
-  const user = await User.findById(userId)
+  const user = await User.findById(userId);
 
-  const isPasswordValid = await user.isPasswordCorrect(oldPassword)
+  const isPasswordValid = await user.isPasswordCorrect(oldPassword);
 
-  if(!isPasswordValid){
-    throw new apiError(400, "invalid password, please check your password")
+  if (!isPasswordValid) {
+    throw new apiError(400, "invalid password, please check your password");
   }
 
-  user.password = newPassword
-  await user.save({validateBeforeSave : false})
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "your password has been updated successfully"))
-})
+    .status(200)
+    .json(new apiResponse(200, "your password has been updated successfully"));
+});
 
 // Access token regeneration
-const refreshAccessToken = asyncHandler(async(req , res) => {
-  const incomingRefreshToken = req.cookies.refreshToken
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies.refreshToken;
 
-  if(!incomingRefreshToken){
-    throw new apiError(401, "unauthorized request")
+  if (!incomingRefreshToken) {
+    throw new apiError(401, "unauthorized request");
   }
 
   try {
-    const decodedToken = JWT.verify(incomingRefreshToken , process.env.REFRESH_TOKEN_SECRET)
+    const decodedToken = JWT.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
 
-    const user = await User.findById(decodedToken._id)
+    const user = await User.findById(decodedToken._id);
 
-    if(!user){
-      throw new apiError(401, "invalid refresh token")
+    if (!user) {
+      throw new apiError(401, "invalid refresh token");
     }
 
-    if(incomingRefreshToken !== user.refreshToken){
-      throw new apiError(401, "refresh token is expired or used")
+    if (incomingRefreshToken !== user.refreshToken) {
+      throw new apiError(401, "refresh token is expired or used");
     }
 
-    const {accessToken , refreshToken} = await generateAccessAndRefereshTokens(user._id)
+    const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(
+      user._id
+    );
 
     const options = {
       httpOnly: true,
-      secure: true
-    }
+      secure: true,
+    };
 
     return res
-    .status(200)
-    .cookie("accessToken" , accessToken , options)
-    .cookie("refreshToken" , refreshToken , options)
-    .json(new apiResponse(200, "access token refreshed"))
-
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(new apiResponse(200, "access token refreshed"));
   } catch (error) {
-    throw new apiError(401, error.message || "invalid refresh token")
+    throw new apiError(401, error.message || "invalid refresh token");
   }
-})
+});
 
 // Forget (send opt using mail to reset password, if forget during login)
 const forget = asyncHandler(async (req, res) => {
@@ -419,7 +460,7 @@ const changePassword = asyncHandler(async (req, res) => {
 
 // user (current user info)
 const currentUser = asyncHandler(async (req, res) => {
-  const user = req.user
+  const user = req.user;
 
   return res
     .status(200)
@@ -429,60 +470,71 @@ const currentUser = asyncHandler(async (req, res) => {
 });
 
 // Users --admin (show all users account details)
-const allUser = asyncHandler(async(req , res) => {
-  const users = await User.find()
+const allUser = asyncHandler(async (req, res) => {
+  const users = await User.find();
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "all users accounts have been retrieved successfully", users))
-})
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        "all users accounts have been retrieved successfully",
+        users
+      )
+    );
+});
 
 // User --admin (get a single user details)
-const userDetails = asyncHandler(async(req , res) => {
-  const userId = req.params.id
+const userDetails = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
 
-  if(!userId || userId.trim() === ""){
-    throw new apiError(400, "please provide user id for required fields")
+  if (!userId || userId.trim() === "") {
+    throw new apiError(400, "please provide user id for required fields");
   }
 
-  const user = await User.findById(userId).select("-password -refreshToken")
+  const user = await User.findById(userId).select("-password -refreshToken");
 
-  if(!user){
-    throw new apiError(404, "user does not exist")
+  if (!user) {
+    throw new apiError(404, "user does not exist");
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "user information retrieved successfully", user))
-})
+    .status(200)
+    .json(
+      new apiResponse(200, "user information retrieved successfully", user)
+    );
+});
 
 // Update userType --admin (update userType)
-const updateUserType = asyncHandler(async(req , res) => {
-  const userId = req.params.id
-  const {type} = req.body
+const updateUserType = asyncHandler(async (req, res) => {
+  const userId = req.params.id;
+  const { type } = req.body;
 
-  if(!type){
-    throw new apiError(400, "please provide user type for required field")
+  if (!type) {
+    throw new apiError(400, "please provide user type for required field");
   }
 
   const user = await User.findByIdAndUpdate(
     userId,
-    { 
-      $set : {
-        userType : type
-      }
+    {
+      $set: {
+        userType: type,
+      },
     },
-    { new : true}
-  )
+    { new: true }
+  );
 
-  if(!user){
-    throw new apiError(500, "unable to update user details at this time, please try again later")
+  if (!user) {
+    throw new apiError(
+      500,
+      "unable to update user details at this time, please try again later"
+    );
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "user successfully updated", user))
-})
+    .status(200)
+    .json(new apiResponse(200, "user successfully updated", user));
+});
 
 // Delete user --admin (delete user account by the admin)
 const deleteUser = asyncHandler(async (req, res) => {
@@ -496,6 +548,14 @@ const deleteUser = asyncHandler(async (req, res) => {
 
   if (!user) {
     throw new apiError(404, "user does not exist");
+  }
+
+  const coverImagePublicId = user.coverImage?.public_id;
+  const cloudinaryResponse =
+    await cloudinary.uploader.destroy(coverImagePublicId);
+
+  if (cloudinaryResponse.result !== "ok") {
+    throw new apiError(500, "failed to delete cover image from Cloudinary");
   }
 
   await User.findByIdAndDelete(userId);
@@ -522,5 +582,5 @@ export {
   deleteUserAccount,
   updateUserAccount,
   updatePassword,
-  updateUserType
+  updateUserType,
 };

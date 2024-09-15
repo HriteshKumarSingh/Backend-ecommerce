@@ -1,10 +1,10 @@
 class apiResponse {
-  constructor(statusCode, message = "success", data, pages = null) {
+  constructor(statusCode, message = "success", data, count = null) {
     (this.statusCode = statusCode),
       (this.message = message),
       (this.data = data),
       (this.success = statusCode < 400);
-    this.pages = pages;
+    this.count = count;
   }
 }
 
