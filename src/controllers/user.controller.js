@@ -551,8 +551,7 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 
   const coverImagePublicId = user.coverImage?.public_id;
-  const cloudinaryResponse =
-    await cloudinary.uploader.destroy(coverImagePublicId);
+  const cloudinaryResponse = await cloudinary.uploader.destroy(coverImagePublicId);
 
   if (cloudinaryResponse.result !== "ok") {
     throw new apiError(500, "failed to delete cover image from Cloudinary");
