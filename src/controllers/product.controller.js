@@ -4,7 +4,7 @@ import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { uploadOnCloudinary } from "../services/cloudinary.service.product.js";
 import apiFunctionality from "../utils/apiFunctionality.js";
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary } from "cloudinary";
 import { User } from "../models/user.model.js";
 
 // Create product --Admin
@@ -89,7 +89,14 @@ const updateProduct = asyncHandler(async (req, res) => {
   const { name, description, price, stock, category } = req.body;
   const updateFields = {};
 
-  if (!name && !description && !price && !stock && !category && (!req.files || req.files.length === 0)) {
+  if (
+    !name &&
+    !description &&
+    !price &&
+    !stock &&
+    !category &&
+    (!req.files || req.files.length === 0)
+  ) {
     throw new apiError(400, "at least one field is required to update");
   }
 
@@ -130,7 +137,6 @@ const updateProduct = asyncHandler(async (req, res) => {
     updateFields.images = uploadedImages;
   }
 
-
   const updatedProduct = await Product.findByIdAndUpdate(
     productId,
     { $set: updateFields },
@@ -138,12 +144,21 @@ const updateProduct = asyncHandler(async (req, res) => {
   );
 
   if (!updatedProduct) {
-    throw new apiError(500, "product details could not be updated, please try again later");
+    throw new apiError(
+      500,
+      "product details could not be updated, please try again later"
+    );
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "product details updated successfully", updatedProduct));
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        "product details updated successfully",
+        updatedProduct
+      )
+    );
 });
 
 // Delete product --Admin
@@ -163,21 +178,29 @@ const deleteProduct = asyncHandler(async (req, res) => {
   try {
     for (const image of product.images) {
       if (image.public_id) {
-        const result = await cloudinary.uploader.destroy(image.public_id, { resource_type: "image" });
+        const result = await cloudinary.uploader.destroy(image.public_id, {
+          resource_type: "image",
+        });
         if (result.result !== "ok") {
-          throw new Error(`failed to delete image with public_id: ${image.public_id}`);
+          throw new Error(
+            `failed to delete image with public_id: ${image.public_id}`
+          );
         }
       }
     }
   } catch (error) {
-    throw new apiError(500, "failed to delete images from Cloudinary" , error.message);
+    throw new apiError(
+      500,
+      "failed to delete images from Cloudinary",
+      error.message
+    );
   }
 
   await Product.findByIdAndDelete(productId);
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "product deleted successfully"));
+    .status(200)
+    .json(new apiResponse(200, "product deleted successfully"));
 });
 
 // Single product (show a single product)
@@ -195,8 +218,10 @@ const singleProduct = asyncHandler(async (req, res) => {
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "product details retrieved successfully", product));
+    .status(200)
+    .json(
+      new apiResponse(200, "product details retrieved successfully", product)
+    );
 });
 
 // All/Search/Filter/Pagination product
@@ -217,8 +242,15 @@ const searchProduct = asyncHandler(async (req, res) => {
   const paginatedProducts = await productQuery.query;
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "products retrieved successfully", paginatedProducts, filteredProductsCount));
+    .status(200)
+    .json(
+      new apiResponse(
+        200,
+        "products retrieved successfully",
+        paginatedProducts,
+        filteredProductsCount
+      )
+    );
 });
 
 // Create review and update review
@@ -229,7 +261,7 @@ const productReview = asyncHandler(async (req, res) => {
     throw new apiError(400, "please provide values for all required fields");
   }
 
-  const fullname = req.user.firstName + " " + req.user.lastName
+  const fullname = req.user.firstName + " " + req.user.lastName;
 
   const review = {
     user: req.user._id,
@@ -271,8 +303,8 @@ const productReview = asyncHandler(async (req, res) => {
   await product.save({ validateBeforeSave: false });
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "review added/updated successfully", product));
+    .status(200)
+    .json(new apiResponse(200, "review added/updated successfully", product));
 });
 
 // Delete review
@@ -309,7 +341,8 @@ const deleteReview = asyncHandler(async (req, res) => {
     avg += rev.rating;
   });
 
-  product.ratings = product.reviews.length > 0 ? avg / product.reviews.length : 0;
+  product.ratings =
+    product.reviews.length > 0 ? avg / product.reviews.length : 0;
 
   await product.save({ validateBeforeSave: false });
 
@@ -319,7 +352,7 @@ const deleteReview = asyncHandler(async (req, res) => {
 });
 
 // Delete review --Admin
-const adminDeleteReview = asyncHandler(async(req , res) => {
+const adminDeleteReview = asyncHandler(async (req, res) => {
   const productId = req.params.productId;
   const userId = req.params.userId;
 
@@ -358,39 +391,42 @@ const adminDeleteReview = asyncHandler(async(req , res) => {
     avg += rev.rating;
   });
 
-  product.ratings = product.reviews.length > 0 ? avg / product.reviews.length : 0;
+  product.ratings =
+    product.reviews.length > 0 ? avg / product.reviews.length : 0;
 
   await product.save({ validateBeforeSave: false });
 
   return res
     .status(200)
     .json(new apiResponse(200, "review deleted successfully", product));
-})
+});
 
 // Show all review of a product --Admin
-const allReview = asyncHandler(async(req , res) => {
-  const productId = req.params.id
+const allReview = asyncHandler(async (req, res) => {
+  const productId = req.params.id;
 
-  if(!productId){
-    throw new apiError(400, "please provide product id")
+  if (!productId) {
+    throw new apiError(400, "please provide product id");
   }
 
-  const product = await Product.findById(productId)
+  const product = await Product.findById(productId);
 
-  if(!product){
-    throw new apiError(404, "product not found")
+  if (!product) {
+    throw new apiError(404, "product not found");
   }
 
-  const reviews = product.reviews
+  const reviews = product.reviews;
 
-  if(!reviews || reviews.length === 0){
-    throw new apiError(404, "no review added for this product")
+  if (!reviews || reviews.length === 0) {
+    throw new apiError(404, "no review added for this product");
   }
 
   return res
-  .status(200)
-  .json(new apiResponse(200, "product reviews retrieved successfully", reviews))
-})
+    .status(200)
+    .json(
+      new apiResponse(200, "product reviews retrieved successfully", reviews)
+    );
+});
 
 export {
   createProduct,
@@ -402,5 +438,5 @@ export {
   productReview,
   allReview,
   deleteReview,
-  adminDeleteReview
+  adminDeleteReview,
 };

@@ -16,6 +16,8 @@ router.route("/delete").delete(verifyJWT, deleteUserAccount)
 router.route("/update").put(verifyJWT,upload.single('coverImage'), updateUserAccount)
 router.route("/update/password").patch(verifyJWT, updatePassword)
 router.route("/validate").get(verifyJWT, refreshAccessToken)
+
+
 router.route("/all").get(verifyJWT, adminAccess("admin"), allUser)
 router.route("/delete/:id").delete(verifyJWT, adminAccess("admin"), deleteUser)
 router.route("/details/:id").get(verifyJWT, adminAccess("admin"), userDetails)

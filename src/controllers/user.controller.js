@@ -8,6 +8,7 @@ import nodemailer from "nodemailer";
 import JWT from "jsonwebtoken";
 import { uploadOnCloudinary } from "../services/cloudinary.service.user.js";
 import { v2 as cloudinary } from "cloudinary";
+import { Address } from "../models/address.model.js";
 
 // Generation of access and refresh token
 const generateAccessAndRefereshTokens = async (userId) => {
@@ -175,23 +176,35 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   if (!password) {
-    throw new apiError(400, "please provide value for password field");
+    throw new apiError(400, "please provide a value for the password field");
   }
 
   const user = await User.findById(userId);
 
-  const isPasswordValid = await user.isPasswordCorrect(password.trim());
+  if (!user) {
+    throw new apiError(404, "user not found");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
     throw new apiError(400, "invalid password, please check your password");
   }
 
   const coverImagePublicId = user.coverImage?.public_id;
-  const cloudinaryResponse =
-    await cloudinary.uploader.destroy(coverImagePublicId);
 
-  if (cloudinaryResponse.result !== "ok") {
-    throw new apiError(500, "failed to delete cover image from Cloudinary");
+  if (coverImagePublicId) {
+    const cloudinaryResponse = await cloudinary.uploader.destroy(coverImagePublicId);
+
+    if (cloudinaryResponse.result !== "ok") {
+      throw new apiError(500, "failed to delete cover image from cloudinary");
+    }
+  }
+
+  const deleteAddress = await Address.findOneAndDelete({ user: userId });
+
+  if (!deleteAddress) {
+    throw new apiError(404, "no associated address found to delete");
   }
 
   try {
@@ -199,7 +212,9 @@ const deleteUserAccount = asyncHandler(async (req, res) => {
 
     return res
       .status(200)
-      .json(new apiResponse(200, "user deleted successfully"));
+      .json(
+        new apiResponse(200, "user and associated address deleted successfully")
+      );
   } catch (error) {
     throw new apiError(
       500,
@@ -551,7 +566,8 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 
   const coverImagePublicId = user.coverImage?.public_id;
-  const cloudinaryResponse = await cloudinary.uploader.destroy(coverImagePublicId);
+  const cloudinaryResponse =
+    await cloudinary.uploader.destroy(coverImagePublicId);
 
   if (cloudinaryResponse.result !== "ok") {
     throw new apiError(500, "failed to delete cover image from Cloudinary");

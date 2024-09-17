@@ -12,6 +12,8 @@ router.route("/update/:id").patch(verifyJWT, adminAccess("admin"), upload.array(
 router.route("/delete/:id").delete(verifyJWT, adminAccess("admin"), deleteProduct)
 router.route("/reviews/:id").get(verifyJWT, adminAccess("admin"), allReview)
 router.route("/reviews/delete/:productId/:userId").delete(verifyJWT, adminAccess("admin"), adminDeleteReview)
+
+
 router.route("/:id").get(verifyJWT, singleProduct)
 router.route("/products").get(verifyJWT, searchProduct)
 router.route("/review").post(verifyJWT, productReview)
