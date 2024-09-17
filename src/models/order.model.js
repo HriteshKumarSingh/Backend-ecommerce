@@ -30,54 +30,85 @@ const orderSchema = new mongoose.Schema(
     ],
     shippingInfo: {
       address: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
+        type : String,
+        required : true
       },
       state: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
+        type : String,
+        required : true
       },
       city: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
+        type : String,
+        required : true
       },
       pin: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
+        type : String,
+        required : true
       },
       phone: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
+        type : String,
+        required : true
       },
     },
     paymentInfo: {
       paymentMethod: {
         type: String,
-        required: true,
+        // required: true,
         // enum: ["credit_card", "debit_card", "paypal", "stripe", "cash_on_delivery"],
       },
       paymentStatus: {
         type: String,
-        required: true,
+        // required: true,
         // enum: ["pending", "completed", "failed", "refunded"],
         default: "pending",
       },
       paymentId: {
         type: String,
-        required: true,
+        // required: true,
         trim: true,
       },
       paymentDate: {
         type: Date,
-        default: Date.now,
+        // default: Date.now,
       },
       paymentAmount: {
         type: Number,
-        required: true,
+        // required: true,
       },
       transactionDetails: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Payment",
+      },
+    },
+    costInfo: {
+      itemCost: {
+        type: Number,
+        // required: true,
+        default: 0,
+      },
+      taxCost: {
+        type: Number,
+        // required: true,
+        default: 0,
+      },
+      shippingCost: {
+        type: Number,
+        // required: true,
+        default: 0,
+      },
+      totalCost: {
+        type: Number,
+        // required: true,
+        default: 0,
+      },
+    },
+    deliveryInfo: {
+      orderStatus: {
+        type: String,
+        default: "processing",
+      },
+      deliveredTime: {
+        type: Date,
       },
     },
     user: {

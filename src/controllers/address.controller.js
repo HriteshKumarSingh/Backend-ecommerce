@@ -8,6 +8,12 @@ const addAddress = asyncHandler(async(req , res) => {
     const {address, state, city, pin, phone} = req.body
     const user = req.user._id
 
+    const existUserAddress = await Address.findOne({user})
+
+    if (existUserAddress) {
+        throw new apiError(400, "an address already exists for this user");
+    }
+
     if(!address || !state || !city || !pin || !phone){
         throw new apiError(400, "please provide values for all required fields");
     }
@@ -39,6 +45,11 @@ const updateAddress = asyncHandler(async(req , res) => {
     const userId = req.user._id
 
     const findAddress = await Address.findOne({user : userId})
+
+    if(!findAddress){
+        throw new apiError(404, "no address found for this user")
+    }
+    
     const addressId = findAddress._id
 
     if(!address && !state && !city && !pin && !phone){
@@ -78,8 +89,34 @@ const currentUserAddress = asyncHandler(async(req , res) => {
     const userId = req.user._id
     const address = await Address.findOne({user : userId})
 
+    if(!address){
+        throw new apiError(404, "no address found for this user")
+    }
+
     return res
     .status(200)
     .json(new apiResponse(200, "user address retrived successfully", address))
 })
-export { addAddress, updateAddress, currentUserAddress }
+
+
+// Delete address
+const deleteAddress = asyncHandler(async(req , res) => {
+    const user = req.user._id
+    const address = await Address.findOne({user : user})
+
+    if(!address){
+        throw new apiError(404, "no address found for this user")
+    }
+
+    const deletedAddress = await Address.findByIdAndDelete(address._id)
+
+    if(!deletedAddress){
+        throw new apiError(500, "unable to delete user address, please try again later")
+    }
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, "user address deleted successfully"))
+})
+
+export { addAddress, updateAddress, currentUserAddress, deleteAddress}
