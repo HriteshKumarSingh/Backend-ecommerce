@@ -3,6 +3,7 @@ import { apiError } from "../utils/apiError.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { Order } from "../models/order.model.js";
 import { Address } from "../models/address.model.js";
+import { Product } from "../models/product.model.js";
 
 // Generate order
 const createOrder = asyncHandler(async (req, res) => {
@@ -102,7 +103,7 @@ const deleteOrder = asyncHandler(async (req, res) => {
 });
 
 
-// show all order
+// Show all order
 const allOrder = asyncHandler(async(req , res) => {
   const user = req.user._id
 
@@ -117,4 +118,54 @@ const allOrder = asyncHandler(async(req , res) => {
   .json(new apiResponse(200, "all orders retrive successfully", order));
 })
 
-export { createOrder, deleteOrder, allOrder };
+
+// Update order (update order status) --Admin
+const updateOrder = asyncHandler(async(req , res) => {
+  const orderId = req.params.id;
+  const { orderStatus } = req.body;
+
+  const order = await Order.findById(orderId).populate("orderInfo.product");
+
+  if (!order) {
+    throw new apiError(404, "order not found");
+  }
+
+  const currentStatus = order.deliveryInfo.orderStatus;
+
+  if (currentStatus === "delivered") {
+    throw new apiError(400, "order has already been delivered, cannot update further");
+  }
+
+  if (currentStatus === "shipped" && orderStatus === "shipped") {
+    throw new apiError(400, "order has already been shipped");
+  }
+
+  if (currentStatus === "shipped" && orderStatus === "pending") {
+    throw new apiError(400, "cannot move back to 'pending' from 'shipped'");
+  }
+
+  if (orderStatus === "shipped") {
+    for (let orderItem of order.orderInfo) {
+      const product = await Product.findById(orderItem.product);
+      if (!product) {
+        throw new apiError(404, `product ${orderItem.name} not found`);
+      }
+
+      if (product.stock < orderItem.quantity) {
+        throw new apiError(400, `insufficient stock for ${product.name}`);
+      }
+
+      product.stock -= orderItem.quantity;
+      await product.save({validateBeforeSave : false});
+    }
+  }
+
+  order.deliveryInfo.orderStatus = orderStatus;
+  await order.save({validateBeforeSave : false});
+
+  return res
+  .status(200)
+  .json(new apiResponse(200, "order status updated successfully", order));
+})
+
+export { createOrder, deleteOrder, allOrder, updateOrder };
