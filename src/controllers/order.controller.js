@@ -85,7 +85,7 @@ const createOrder = asyncHandler(async (req, res) => {
     );
 });
 
-// Delete order
+// Delete order (cancle order)
 const deleteOrder = asyncHandler(async (req, res) => {
   const orderId  = req.params.id;
 
@@ -161,6 +161,7 @@ const updateOrder = asyncHandler(async(req , res) => {
   }
 
   order.deliveryInfo.orderStatus = orderStatus;
+  order.deliveryInfo.deliveredTime = Date.now();
   await order.save({validateBeforeSave : false});
 
   return res
