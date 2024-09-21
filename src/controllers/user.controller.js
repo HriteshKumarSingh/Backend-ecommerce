@@ -29,12 +29,8 @@ const generateAccessAndRefereshTokens = async (userId) => {
 // Signup (creating user account)
 const signup = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
-
-  if (
-    [firstName, lastName, email, password].some(
-      (fields) => fields.trim() === ""
-    )
-  ) {
+  
+  if(!firstName && !lastName && !email && !password){
     throw new apiError(400, "please provide values for all required fields");
   }
 
