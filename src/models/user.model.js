@@ -31,16 +31,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "user",
     },
-    coverImage: {
-      public_id: {
-        type: String,
-        required: true,
-      },
-      url: {
-        type: String,
-        required: true,
-      },
-    },
+    // coverImage: {
+    //   public_id: {
+    //     type: String,
+    //     required: true,
+    //   },
+    //   url: {
+    //     type: String,
+    //     required: true,
+    //   },
+    // },
     refreshToken: {
       type: String,
     },

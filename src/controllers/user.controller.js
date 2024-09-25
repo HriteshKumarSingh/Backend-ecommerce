@@ -30,9 +30,9 @@ const generateAccessAndRefereshTokens = async (userId) => {
 const signup = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
   
-  if(!firstName && !lastName && !email && !password){
+  if ([firstName, lastName, email, password].some((field) => !field || field.trim() === "")) {
     throw new apiError(400, "please provide values for all required fields");
-  }
+  }  
 
   if (!email.includes("@gmail.com")) {
     throw new apiError(400, "invalid email address, please use a valid format");
@@ -47,23 +47,23 @@ const signup = asyncHandler(async (req, res) => {
     );
   }
 
-  if (!req.file) {
-    throw new apiError(400, "cover image is required");
-  }
+  // if (!req.file) {
+    // throw new apiError(400, "cover image is required");
+  // }
 
-  const coverImagePath = req.file.path;
+  // const coverImagePath = req.file.path;
 
-  const coverImage = await uploadOnCloudinary(coverImagePath);
+  // const coverImage = await uploadOnCloudinary(coverImagePath);
 
   const user = await User.create({
     firstName,
     lastName,
     email,
     password,
-    coverImage: {
-      public_id: coverImage.public_id || "",
-      url: coverImage.url || "",
-    },
+    // coverImage: {
+      // public_id: coverImage.public_id || "",
+      // url: coverImage.url || "",
+    // },
   });
 
   const createdUser = await User.findById(user._id).select(
