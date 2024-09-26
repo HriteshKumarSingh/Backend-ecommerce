@@ -233,24 +233,24 @@ const updateUserAccount = asyncHandler(async (req, res) => {
   if (lastName) updateFields.lastName = lastName.trim();
   if (email) updateFields.email = email.trim();
 
-  if (req.file) {
-    const user = await User.findById(userId);
-    if (user.coverImage && user.coverImage.public_id) {
-      await cloudinary.uploader.destroy(user.coverImage.public_id);
-    }
+  // if (req.file) {
+  //   const user = await User.findById(userId);
+  //   if (user.coverImage && user.coverImage.public_id) {
+  //     await cloudinary.uploader.destroy(user.coverImage.public_id);
+  //   }
 
-    const coverImagePath = req.file.path;
-    const coverImage = await uploadOnCloudinary(coverImagePath);
+  //   const coverImagePath = req.file.path;
+  //   const coverImage = await uploadOnCloudinary(coverImagePath);
 
-    if (!coverImage) {
-      throw new apiError(500, "failed to upload the new cover image");
-    }
+  //   if (!coverImage) {
+  //     throw new apiError(500, "failed to upload the new cover image");
+  //   }
 
-    updateFields.coverImage = {
-      public_id: coverImage.public_id,
-      url: coverImage.url,
-    };
-  }
+  //   updateFields.coverImage = {
+  //     public_id: coverImage.public_id,
+  //     url: coverImage.url,
+  //   };
+  // }
 
   const updatedUser = await User.findByIdAndUpdate(
     userId,
